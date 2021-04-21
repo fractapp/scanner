@@ -1,0 +1,33 @@
+{
+  "name": "scanner",
+  "version": "alpha-1.0.0",
+  "description": "Transactions scanner for Fractapp",
+  "main": "src/app.tsx",
+  "author": "Elshan Dzhafarov",
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "tsc",
+    "api": "node ./bin/cmd/api.js",
+    "scanner": "node ./bin/cmd/scanner.js",
+    "notifier": "node ./bin/cmd/notifier.js",
+    "devApi": "ts-node src/cmd/api.ts",
+    "devScanner": "ts-node src/cmd/scanner.ts",
+    "devNotifier": "ts-node src/cmd/notifier.ts"
+  },
+  "dependencies": {
+    "@polkadot/api": "^4.3.1",
+    "@types/express": "^4.17.11",
+    "@types/mongoose": "^5.10.4",
+    "@types/morgan": "^1.9.2",
+    "@types/node": "^14.14.37",
+    "axios": "^0.21.1",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "mongoose": "^5.12.2",
+    "morgan": "^1.10.0",
+    "typescript": "^4.2.3"
+  },
+  "devDependencies": {
+    "ts-node": "^9.1.1"
+  }
+}
