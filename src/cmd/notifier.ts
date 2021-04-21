@@ -15,6 +15,9 @@ async function kill() {
     console.log("\n--------------------");
     console.log("Start notifier shutdown...");
     console.log("--------------------");
+    if (isShutDown) {
+        process.exit()
+    }
     isShutDown = true
 }
 process.on('SIGINT', kill);
