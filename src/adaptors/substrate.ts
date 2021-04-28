@@ -51,15 +51,14 @@ export class SubstrateAdaptor implements Adaptor {
         }
     }
 
-    async getTxsAndEvents(hash: string): Promise<Array<TxAndEvents>> {
-        const block = await this._api.rpc.chain.getBlock(hash)
+    async getTxsAndEvents(blockHash: string): Promise<Array<TxAndEvents>> {
+        const block = await this._api.rpc.chain.getBlock(blockHash)
         const records = await this._api.query.system.events.at(block.block.header.hash);
-
-        const eventIdPrefix = block.block.hash.toHex()
 
         const txsAndEvents: Array<TxAndEvents> = []
         for (let index = 0; index < block.block.extrinsics.length; index++) {
-            const hash = block.block.extrinsics[index].hash.toHex()
+            const extrinsic = block.block.extrinsics[index]
+            const txHash = extrinsic.hash.toHex()
 
             const eventRecords = records
                 .filter(({phase, event}) =>
@@ -77,7 +76,7 @@ export class SubstrateAdaptor implements Adaptor {
 
             const txAndEvents: TxAndEvents = {
                 transaction: {
-                    hash: hash,
+                    hash: txHash,
                     status: failEvent.length == 0 ? TxStatus.Success : TxStatus.Fail
                 },
                 events: []
@@ -104,11 +103,10 @@ export class SubstrateAdaptor implements Adaptor {
                 }
 
 
-                const eventId = `${eventIdPrefix}-${index}-${eventIndex}`
-
+                const eventId = `${txHash}-${extrinsic.signer.toString()}-${extrinsic.nonce}`
                 txAndEvents.events.push({
                     id: eventId,
-                    hash: hash,
+                    hash: txHash,
                     from: record.event.data[0].toString(),
                     to: record.event.data[1].toString(),
                     value: record.event.data[2].toString(),
