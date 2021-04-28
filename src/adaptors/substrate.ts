@@ -102,8 +102,9 @@ export class SubstrateAdaptor implements Adaptor {
                     continue
                 }
 
-
-                const eventId = `${txHash}-${extrinsic.signer.toString()}-${extrinsic.nonce}`
+                const eventId = `${txHash}-${extrinsic.signer.toString()}-${extrinsic.nonce
+                    .toBn()
+                    .toString()}`
                 txAndEvents.events.push({
                     id: eventId,
                     hash: txHash,
