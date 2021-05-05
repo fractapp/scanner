@@ -102,9 +102,14 @@ export class SubstrateAdaptor implements Adaptor {
                     continue
                 }
 
-                const eventId = `${txHash}-${extrinsic.signer.toString()}-${extrinsic.nonce
+                let eventId = `${txHash}-${extrinsic.signer.toString()}-${extrinsic.nonce
                     .toBn()
                     .toString()}`
+
+                if (extrinsic.method.method == "batch") {
+                    eventId += "-" + eventIndex
+                }
+
                 txAndEvents.events.push({
                     id: eventId,
                     hash: txHash,
