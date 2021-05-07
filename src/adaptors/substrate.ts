@@ -56,6 +56,8 @@ export class SubstrateAdaptor implements Adaptor {
         const records = await this._api.query.system.events.at(block.block.header.hash);
 
         const txsAndEvents: Array<TxAndEvents> = []
+
+        let transferId = 0
         for (let index = 0; index < block.block.extrinsics.length; index++) {
             const extrinsic = block.block.extrinsics[index]
             const txHash = extrinsic.hash.toHex()
@@ -104,11 +106,7 @@ export class SubstrateAdaptor implements Adaptor {
 
                 let eventId = `${txHash}-${extrinsic.signer.toString()}-${extrinsic.nonce
                     .toBn()
-                    .toString()}`
-
-                if (extrinsic.method.method == "batch") {
-                    eventId += "-" + eventIndex
-                }
+                    .toString()}-${transferId}`
 
                 txAndEvents.events.push({
                     id: eventId,
@@ -118,6 +116,7 @@ export class SubstrateAdaptor implements Adaptor {
                     value: record.event.data[2].toString(),
                     fee: String(fee),
                 })
+                transferId++
             }
 
             txsAndEvents.push(txAndEvents)
