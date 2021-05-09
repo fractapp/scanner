@@ -55,6 +55,12 @@ const start = async () => {
     const lastBlock: IBlock | null = await Block.findOne({ status: BlockStatus.Success, network: network }).sort({ number: 'desc' })
 
     let lastBlockHeight: bigint = lastBlock == null ? envHeight : BigInt(lastBlock?.number)
+    if (lastBlock != null) {
+        await Transaction.find({ block: lastBlock._id }).remove()
+        await Event.find({ block: lastBlock._id }).remove()
+        await Block.find({ number: lastBlock.number,  status: BlockStatus.Success, network: network }).remove()
+    }
+
     while (true) {
         try {
             lastBlockHeight = await scan(lastBlockHeight, network, adaptor)
@@ -79,8 +85,7 @@ async function scan(lastScannedHeight: bigint, network: Network, adaptor: Adapto
     const lastFinalizedHeight = await adaptor.getLastFinalizedHeight()
     const lastNotFinalizedHeight = await adaptor.getLastHeight()
 
-
-    for (let blockNumber = lastScannedHeight+BigInt(1); blockNumber <= lastNotFinalizedHeight; blockNumber++) {
+    for (let blockNumber = lastScannedHeight; blockNumber <= lastNotFinalizedHeight; blockNumber++) {
         const block = await adaptor.getBlock(blockNumber)
 
         console.log("Block number: " + block.height)
