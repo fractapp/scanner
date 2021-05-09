@@ -178,9 +178,9 @@ async function scan(lastScannedHeight: bigint, network: Network, adaptor: Adapto
             }
         }
 
+        await Block.create(newBlock)
         await Transaction.create(transactions)
         await Event.create(events)
-        await Block.create(newBlock)
         console.log(`add new block (Status: ${newBlock.status})`)
 
         if (isShutDown) {
