@@ -10,20 +10,6 @@ import {SubstrateAdaptor} from "../adaptors/substrate";
 
 dotenv.config()
 
-// TODO
-let isShutDown = false
-async function kill() {
-    console.log("\n--------------------");
-    console.log("Start scanner shutdown...");
-    console.log("--------------------");
-    if (isShutDown) {
-        process.exit()
-    }
-    isShutDown = true
-}
-process.on('SIGINT', kill);
-process.on('SIGTERM', kill);
-
 const args = process.argv.slice(2);
 
 const start = async () => {
@@ -65,18 +51,11 @@ const start = async () => {
         try {
             lastBlockHeight = await scan(lastBlockHeight, network, adaptor)
 
-            if (isShutDown) {
-                console.log("--------------------");
-                console.log("Scanner shutdown");
-                console.log("--------------------");
-                process.exit()
-                return
-            }
-
             console.log("Sleep 5 seconds")
             await new Promise(resolve => setTimeout(resolve, 5000));
         } catch (e) {
             console.log("Error: " + e.toString())
+            process.exit(1)
         }
     }
 }
@@ -90,10 +69,6 @@ async function scan(lastScannedHeight: bigint, network: Network, adaptor: Adapto
 
         console.log("Block number: " + block.height)
         console.log("Block hash: " + block.hash)
-
-        if (isShutDown) {
-            return block.height
-        }
 
         // get pending or success block
         const dbBlock: IBlock | null = await Block.findOne({number: String(block.height), network: network, status: { $ne: BlockStatus.Forked } })
@@ -182,10 +157,6 @@ async function scan(lastScannedHeight: bigint, network: Network, adaptor: Adapto
         await Transaction.create(transactions)
         await Event.create(events)
         console.log(`add new block (Status: ${newBlock.status})`)
-
-        if (isShutDown) {
-            return lastFinalizedHeight
-        }
     }
 
     return lastFinalizedHeight
