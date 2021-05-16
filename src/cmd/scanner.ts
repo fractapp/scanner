@@ -42,9 +42,9 @@ const start = async () => {
 
     let lastBlockHeight: bigint = lastBlock == null ? envHeight : BigInt(lastBlock?.number)
     if (lastBlock != null) {
-        await Transaction.find({ block: lastBlock._id }).remove()
-        await Event.find({ block: lastBlock._id }).remove()
-        await Block.find({ number: lastBlock.number,  status: BlockStatus.Success, network: network }).remove()
+        await Transaction.find({ block: lastBlock._id }).deleteMany()
+        await Event.find({ block: lastBlock._id }).deleteMany()
+        await Block.find({ number: lastBlock.number, network: network }).deleteMany()
     }
 
     while (true) {
