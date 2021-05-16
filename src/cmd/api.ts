@@ -136,12 +136,12 @@ app.get('/status', async (req, res) => {
 
     return res.send({
         polkadot: {
-            lastHeight: await polkadotApi.getLastHeight(),
-            lastScannedHeight: lastBlockPolkadot?.number ?? 0,
+            lastHeight: (await polkadotApi.getLastHeight()).toString(),
+            lastScannedHeight: lastBlockPolkadot?.number.toString() ?? "0",
         },
         kusama: {
-            lastHeight: await kusamaApi.getLastHeight(),
-            lastScannedHeight: lastBlockKusama?.number ?? 0
+            lastHeight: (await kusamaApi.getLastHeight()).toString(),
+            lastScannedHeight: lastBlockKusama?.number.toString() ?? "0"
         }
     });
 })
