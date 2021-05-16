@@ -1,17 +1,15 @@
 import express from 'express';
 import {Event, IEvent} from "../models/db/event";
-import {Currency, toCurrency} from "../models/enums/currency";
+import {Currency, getNativeCurrency, toCurrency} from "../models/enums/currency";
 import {TransactionRs, TxStatusRs} from '../models/response/transactions'
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import {IBlock} from "../models/db/block";
+import {Block, IBlock} from "../models/db/block";
 import {ITransaction, Transaction} from "../models/db/transactions";
 import morgan from 'morgan'
-import {BlockStatus, TxStatus} from "../models/enums/statuses";
+import {BlockStatus, Network, TxStatus} from "../models/enums/statuses";
 import {SubstrateAdaptor} from "../adaptors/substrate";
 import {Adaptor} from "../adaptors/adaptor";
-import {Keyring} from '@polkadot/keyring';
-import {ApiPromise, WsProvider} from '@polkadot/api';
 
 const app = express()
 dotenv.config()
@@ -32,7 +30,6 @@ mongoose.connect(connectionString, {
     useFindAndModify: true,
     useCreateIndex: true
 }, async function () {
-
     apiByCurrency.set(Currency.DOT, await SubstrateAdaptor.getInstance(process.env["POLKADOT_RPC_URL"] as string, Currency.DOT))
     apiByCurrency.set(Currency.KSM, await SubstrateAdaptor.getInstance(process.env["KUSAMA_RPC_URL"] as string, Currency.KSM))
 
@@ -113,4 +110,38 @@ app.get('/substrate/balance/:address', async (req, res) => {
     });
 })
 
+app.get('/substrate/send', async (req, res) => {
+    const address = req.params.tx
+    const currency: Currency = req.query.currency == undefined ? Currency.DOT : toCurrency(req.query.currency as string)
 
+    const api = apiByCurrency.get(currency)!
+    const balance = await api.getBalance(address)
+
+    return res.send({
+        value: String(balance)
+    });
+})
+
+app.get('/status', async (req, res) => {
+    const polkadotApi = apiByCurrency.get(Currency.DOT)!
+    const kusamaApi = apiByCurrency.get(Currency.KSM)!
+
+    const lastBlockPolkadot: IBlock | null = await Block.findOne({
+        network: Network.Polkadot
+    }).sort({number: 'desc'})
+
+    const lastBlockKusama: IBlock | null = await Block.findOne({
+        network: Network.Kusama
+    }).sort({number: 'desc'})
+
+    return res.send({
+        polkadot: {
+            lastHeight: await polkadotApi.getLastHeight(),
+            lastScannedHeight: lastBlockPolkadot?.number ?? 0,
+        },
+        kusama: {
+            lastHeight: await kusamaApi.getLastHeight(),
+            lastScannedHeight: lastBlockKusama?.number ?? 0
+        }
+    });
+})
