@@ -38,13 +38,18 @@ const start = async () => {
     })
     const envHeight: bigint = BigInt(defaultHeight)
 
-    const lastBlock: IBlock | null = await Block.findOne({ status: BlockStatus.Success, network: network }).sort({ number: 'desc' })
+    const lastBlock: IBlock | null = await Block.findOne({status: BlockStatus.Success, network: network }).sort({ number: 'desc' })
 
     let lastBlockHeight: bigint = lastBlock == null ? envHeight : BigInt(lastBlock?.number)
     if (lastBlock != null) {
-        await Transaction.find({ block: lastBlock._id }).deleteMany()
-        await Event.find({ block: lastBlock._id }).deleteMany()
-        await Block.find({ number: lastBlock.number, network: network }).deleteMany()
+        const blockForRemoving: Array<IBlock> = await Block.find({ number: { $gte: lastBlock.number }, network: network })
+
+        for (let block of blockForRemoving) {
+            await Transaction.find({ block: block._id }).deleteMany()
+            await Event.find({ block: block._id }).deleteMany()
+        }
+
+        await Block.find({ number: { $gte: lastBlock.number }, network: network }).deleteMany()
     }
 
     while (true) {
