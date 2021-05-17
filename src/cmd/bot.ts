@@ -7,7 +7,7 @@ dotenv.config()
 const args = process.argv.slice(2);
 
 const checkTimeout = 5 * 60 * 1000 / 3
-const statusOkMsgTimeout = 60 * 60 * 1000
+const statusOkMsgTimeout = 120 * 60 * 1000
 const statusOkErrorTimeout = 20 * 60 * 1000 /20
 
 const scannedBlockOffset = 100
