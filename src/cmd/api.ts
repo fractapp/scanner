@@ -5,7 +5,7 @@ import {TransactionRs, TxStatusRs} from '../models/response/transactions'
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import {Block, IBlock} from "../models/db/block";
-import {ITransaction} from "../models/db/transactions";
+import {ITransaction, Transaction} from "../models/db/transactions";
 import morgan from 'morgan'
 import {BlockStatus, Network, TxStatus} from "../models/enums/statuses";
 import {SubstrateAdaptor} from "../adaptors/substrate";
@@ -40,6 +40,27 @@ mongoose.connect(connectionString, {
     app.listen(port, () => {
         console.log(`Example app listening at http://${host}:${port}`)
     })
+})
+
+app.get('/transaction/:hash', async (req, res) => {
+    const hash = req.params.hash
+    let txs: Array<ITransaction> = await Transaction.find({
+        hash: hash
+    }).populate('block').sort({ number: "desc"})
+
+    txs = txs.filter((t) => t.block != undefined && (t.block as IBlock).status != BlockStatus.Forked)
+
+    let status = TxStatusRs.Pending
+    if (txs.length != 0) {
+        const tx = txs[0]
+        if ((tx.block as IBlock).status == BlockStatus.Success) {
+            status = tx.status == TxStatus.Success ? TxStatusRs.Success : TxStatusRs.Fail
+        }
+    }
+
+    return res.send({
+        status: status
+    });
 })
 
 app.get('/transactions/:address', async (req, res) => {
