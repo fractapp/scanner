@@ -27,8 +27,14 @@ const start = async () => {
         }
 
         (async () => {
-            const rs = await axios.get(`${scannerApiUrl}/status`)
-            if (rs.status != 200) {
+            let rs
+            try {
+                rs = await axios.get(`${scannerApiUrl}/status`)
+                if (rs.status != 200) {
+                    await bot.sendMessage(chatId, "🔴 Scanner Api not available")
+                    return
+                }
+            } catch (e) {
                 await bot.sendMessage(chatId, "🔴 Scanner Api not available")
                 return
             }
@@ -78,21 +84,25 @@ async function checkStatus(scannerApiUrl: string): Promise<{
     isOk: boolean,
     error: string
 }> {
-    const rs = await axios.get(`${scannerApiUrl}/status`)
-    if (rs.status != 200) {
+    try {
+        const rs = await axios.get(`${scannerApiUrl}/status`)
+        if (rs.status != 200) {
+            return {isOk: false, error: "🔴 Scanner Api not available"}
+        }
+
+        if (BigInt(rs.data.polkadot.lastScannedHeight) < BigInt(rs.data.polkadot.lastHeight) - BigInt(scannedBlockOffset) ||
+            BigInt(rs.data.kusama.lastScannedHeight) < BigInt(rs.data.kusama.lastHeight) - BigInt(scannedBlockOffset)
+        ) {
+            return {isOk: false, error: "🔴🛰 Last scanned height lags behind from live height"}
+        }
+
+        if (BigInt(rs.data.polkadot.lastNotifiedHeight) < BigInt(rs.data.polkadot.lastScannedHeight) - BigInt(notifiedBlockOffset) ||
+            BigInt(rs.data.kusama.lastNotifiedHeight) < BigInt(rs.data.kusama.lastScannedHeight) - BigInt(notifiedBlockOffset)
+        ) {
+            return {isOk: false, error: "🔴👀 Notified height lags behind"}
+        }
+    }catch (e) {
         return {isOk: false, error: "🔴 Scanner Api not available"}
-    }
-
-    if (BigInt(rs.data.polkadot.lastScannedHeight) < BigInt(rs.data.polkadot.lastHeight) - BigInt(scannedBlockOffset) ||
-        BigInt(rs.data.kusama.lastScannedHeight) < BigInt(rs.data.kusama.lastHeight) - BigInt(scannedBlockOffset)
-    ) {
-        return {isOk: false, error: "🔴🛰 Last scanned height lags behind from live height"}
-    }
-
-    if (BigInt(rs.data.polkadot.lastNotifiedHeight) < BigInt(rs.data.polkadot.lastScannedHeight) - BigInt(notifiedBlockOffset) ||
-        BigInt(rs.data.kusama.lastNotifiedHeight) < BigInt(rs.data.kusama.lastScannedHeight) - BigInt(notifiedBlockOffset)
-    ) {
-        return {isOk: false, error: "🔴👀 Notified height lags behind"}
     }
 
     return {isOk: true, error: ""}
