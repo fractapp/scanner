@@ -57,10 +57,9 @@ export class SubstrateAdaptor implements Adaptor {
 
         const txsAndEvents: Array<TxAndEvents> = []
 
-        let transferId = 0
         for (let index = 0; index < block.block.extrinsics.length; index++) {
             const extrinsic = block.block.extrinsics[index]
-            const txHash = extrinsic.hash.toHex()
+            const exHash = extrinsic.hash.toHex()
 
             const eventRecords = records
                 .filter(({phase, event}) =>
@@ -78,7 +77,8 @@ export class SubstrateAdaptor implements Adaptor {
 
             const txAndEvents: TxAndEvents = {
                 transaction: {
-                    hash: txHash,
+                    id: `${blockHash}-${index}`,
+                    hash: exHash,
                     status: failEvent.length == 0 ? TxStatus.Success : TxStatus.Fail
                 },
                 events: []
@@ -98,25 +98,27 @@ export class SubstrateAdaptor implements Adaptor {
                 }
             }
 
-            for (let eventIndex = 0; eventIndex < eventRecords.length; eventIndex++) {
-                const record = eventRecords[eventIndex]
+            for (let eventIndex = 0; eventIndex < records.length; eventIndex++) {
+                const record = records[eventIndex]
+
+                if (!record.phase.isApplyExtrinsic ||
+                    !record.phase.asApplyExtrinsic.eq(index) ||
+                    !this._isTransferEvent(record.event)) {
+                    continue
+                }
+
+
                 if (record.event.section != 'balances' || record.event.method != 'Transfer') {
                     continue
                 }
 
-                let eventId = `${txHash}-${extrinsic.signer.toString()}-${extrinsic.nonce
-                    .toBn()
-                    .toString()}-${transferId}`
-
                 txAndEvents.events.push({
-                    id: eventId,
-                    hash: txHash,
+                    id: `${blockHash}-${eventIndex}`,
                     from: record.event.data[0].toString(),
                     to: record.event.data[1].toString(),
                     value: record.event.data[2].toString(),
                     fee: String(fee),
                 })
-                transferId++
             }
 
             txsAndEvents.push(txAndEvents)

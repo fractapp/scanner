@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import {Event, IEvent} from "../models/db/event";
 import {getNativeCurrency} from "../models/enums/currency";
 import {ITransaction, Transaction} from "../models/db/transactions";
-import {Adaptor} from "../adaptors/adaptor";
+import {Adaptor, TxAndEvents} from "../adaptors/adaptor";
 import {BlockStatus, Network} from "../models/enums/statuses";
 import {Block, IBlock} from "../models/db/block";
 import {SubstrateAdaptor} from "../adaptors/substrate";
@@ -14,8 +14,10 @@ const args = process.argv.slice(2);
 
 const start = async () => {
     const connectionString = process.env["MONGODB_CONNECTION"] as string
+
     const network =  args[0] as Network
-    const defaultHeight = args[1].trim() != "" ? BigInt(args[1] as string) : BigInt(1)
+    const defaultHeight = args[1] != undefined && args[1].trim() != "" ? BigInt(args[1] as string) : BigInt(1)
+    const scanCount =  args[2] != undefined && args[2].trim() != "" ? BigInt(args[2] as string) : BigInt(100)
 
     const currency = getNativeCurrency(network)
     let adaptor: Adaptor
@@ -39,8 +41,6 @@ const start = async () => {
     const envHeight: bigint = BigInt(defaultHeight)
 
     const lastBlock: IBlock | null = await Block.findOne({status: BlockStatus.Success, network: network }).sort({ number: 'desc' })
-
-    let lastBlockHeight: bigint = lastBlock == null ? envHeight : BigInt(lastBlock?.number)
     if (lastBlock != null) {
         const blockForRemoving: Array<IBlock> = await Block.find({ number: { $gte: lastBlock.number }, network: network })
 
@@ -54,10 +54,21 @@ const start = async () => {
 
     while (true) {
         try {
-            lastBlockHeight = await scan(lastBlockHeight, network, adaptor)
+            const lastSuccessBlock: IBlock | null = await Block.findOne({status: BlockStatus.Success, network: network }).sort({ number: 'desc' })
+            const lastPendingBlock: IBlock | null = await Block.findOne({status: BlockStatus.Pending, network: network }).sort({ number: 'desc' })
 
-            console.log("Sleep 5 seconds")
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            const startHeight = lastSuccessBlock == null ? envHeight : (BigInt(lastSuccessBlock?.number) + BigInt(1))
+            let toHeight = await adaptor.getLastHeight()
+
+            if (lastPendingBlock != null && BigInt(lastPendingBlock.number) >= toHeight) {
+                console.log("Sleep 3 seconds")
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+
+            if (toHeight-scanCount > startHeight) {
+                toHeight = startHeight + scanCount
+            }
+            await scan(startHeight, toHeight, network, adaptor)
         } catch (e) {
             console.log("Error: " + e.toString())
             process.exit(1)
@@ -65,66 +76,64 @@ const start = async () => {
     }
 }
 
-async function scan(lastScannedHeight: bigint, network: Network, adaptor: Adaptor): Promise<bigint> {
+async function scan(fromHeight: bigint, toHeight: bigint, network: Network, adaptor: Adaptor) {
     const lastFinalizedHeight = await adaptor.getLastFinalizedHeight()
-    const lastNotFinalizedHeight = await adaptor.getLastHeight()
 
-    for (let blockNumber = lastScannedHeight; blockNumber <= lastNotFinalizedHeight; blockNumber++) {
-        const block = await adaptor.getBlock(blockNumber)
+    const blocks = new Map<bigint, {
+        isExistInDb: boolean,
+        timestamp: number,
+        hash: string,
+    }>()
+    const txsAndEventsByBlock = new Map<bigint, Array<TxAndEvents>>()
 
-        console.log("Block number: " + block.height)
-        console.log("Block hash: " + block.hash)
-
-        // get pending or success block
-        const dbBlock: IBlock | null = await Block.findOne({number: String(block.height), network: network, status: { $ne: BlockStatus.Forked } })
-
-        if (dbBlock != null && lastFinalizedHeight >= block.height) {
-            if (dbBlock.hash != block.hash) {
-                await Event.updateMany({block: dbBlock._id }, { blockStatus: BlockStatus.Forked })
-                dbBlock.status = BlockStatus.Forked
-                await dbBlock.save()
-
-                console.log("block is forked")
-
-                // return to find valid fork
-                blockNumber--
-                continue
-            } else if (dbBlock.status == BlockStatus.Pending) {
-                await Event.updateMany({block: dbBlock._id}, {blockStatus: BlockStatus.Success})
-                dbBlock.status = BlockStatus.Success
-                await dbBlock.save()
-
-                // drop all forks
-                await Block.updateMany(
-                    {
-                        _id: {
-                            $ne: dbBlock._id
-                        },
-                        number: String(block.height),
-                        network: network
-                    },
-                    {
-                        status: BlockStatus.Forked
-                    })
-                console.log("block is confirmed")
+    const asyncFunctions = new Map<bigint, Promise<void>>()
+    for (let blockNumber = fromHeight; blockNumber <= toHeight; blockNumber++) {
+        asyncFunctions.set(blockNumber, (
+            async () => {
+                const info = await scanBlock(blockNumber, network, adaptor)
+                blocks.set(blockNumber, { isExistInDb: info.isExistInDb, hash: info.hash, timestamp: info.timestamp })
+                txsAndEventsByBlock.set(blockNumber, info.txAndEvents)
             }
+        )())
+    }
 
-            continue
+   for (let blockNumber = fromHeight; blockNumber <= toHeight; blockNumber++) {
+        await asyncFunctions.get(blockNumber)!
+        const blockInfo = blocks.get(blockNumber)!
+        const txsAndEvents = txsAndEventsByBlock.get(blockNumber)!
+
+       console.log("Block number: " + blockNumber)
+       console.log("Block hash: " + blockInfo.hash)
+
+        if (blockInfo.isExistInDb && lastFinalizedHeight >= blockNumber) {
+            await Block.updateMany({
+                hash: {
+                    $ne: blockInfo.hash
+                },
+                number: String(blockNumber),
+                network: network
+            }, {status: BlockStatus.Forked})
+
+            await Block.updateOne({
+                hash: blockInfo.hash,
+                number: String(blockNumber),
+                network: network
+            }, {status: BlockStatus.Success})
+
+            console.log("block is confirmed")
         }
 
-        if (dbBlock != null) {
-            continue
-        }
+       if (blockInfo.isExistInDb) {
+           continue
+       }
 
         const newBlock: IBlock = new Block({
             _id: new mongoose.Types.ObjectId(),
-            hash: block.hash,
-            number: block.height,
-            status: lastFinalizedHeight >= block.height ? BlockStatus.Success : BlockStatus.Pending,
+            hash: blockInfo.hash,
+            number: blockNumber,
+            status: lastFinalizedHeight >= blockNumber ? BlockStatus.Success : BlockStatus.Pending,
             network: network,
         })
-
-        const txsAndEvents = await adaptor.getTxsAndEvents(block.hash)
 
         const events: Array<IEvent> = []
         const transactions: Array<ITransaction> = []
@@ -132,9 +141,10 @@ async function scan(lastScannedHeight: bigint, network: Network, adaptor: Adapto
         for(let txAndEvents of txsAndEvents) {
             const tx = new Transaction({
                 _id: new mongoose.Types.ObjectId(),
+                txId: txAndEvents.transaction.id,
                 hash: txAndEvents.transaction.hash,
+                status: txAndEvents.transaction.status,
                 block: newBlock._id,
-                status: txAndEvents.transaction.status
             })
             transactions.push(tx)
             console.log("Tx found: " + tx.hash)
@@ -142,16 +152,14 @@ async function scan(lastScannedHeight: bigint, network: Network, adaptor: Adapto
             for(let event of txAndEvents.events) {
                 events.push(new Event({
                     eventId: event.id,
-                    hash: event.hash,
                     block: newBlock._id,
                     transaction: tx._id,
-                    fee: String(event.fee),
                     from: event.from,
                     to: event.to,
+                    fee: String(event.fee),
                     value: event.value,
+                    timestamp: blockInfo.timestamp,
                     currency: adaptor.getCurrency(),
-                    timestamp: block.timestamp,
-                    blockStatus: newBlock.status,
                     isNotified: false
                 }))
                 console.log("Event found: " + event.id)
@@ -163,8 +171,28 @@ async function scan(lastScannedHeight: bigint, network: Network, adaptor: Adapto
         await Event.create(events)
         console.log(`add new block (Status: ${newBlock.status})`)
     }
-
-    return lastFinalizedHeight
 }
 
+async function scanBlock(blockNumber: bigint, network: Network, adaptor: Adaptor): Promise<{
+    isExistInDb: boolean,
+    hash: string,
+    timestamp: number,
+    txAndEvents: Array<TxAndEvents>
+}> {
+    const block = await adaptor.getBlock(blockNumber)
+
+    const dbBlock: IBlock | null = await Block.findOne({ hash: block.hash, network: network })
+
+    if (dbBlock != null) {
+        return  {isExistInDb: true, hash: block.hash, timestamp: block.timestamp, txAndEvents: []}
+    }
+
+    const txsAndEvents = await adaptor.getTxsAndEvents(block.hash)
+    return {
+        isExistInDb: false,
+        hash: block.hash,
+        timestamp: block.timestamp,
+        txAndEvents: txsAndEvents
+    }
+}
 setImmediate(start)

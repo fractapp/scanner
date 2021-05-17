@@ -28,13 +28,13 @@ export type TxAndEvents = {
 }
 
 export type Transaction = {
+    id: string,
     hash: string,
     status: TxStatus,
 }
 
 export type Event = {
     id: string,
-    hash: string,
     from: string,
     to: string,
     value: string,

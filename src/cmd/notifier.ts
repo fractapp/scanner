@@ -9,20 +9,6 @@ import axios from 'axios'
 
 dotenv.config()
 
-// TODO
-let isShutDown = false
-async function kill() {
-    console.log("\n--------------------");
-    console.log("Start notifier shutdown...");
-    console.log("--------------------");
-    if (isShutDown) {
-        process.exit()
-    }
-    isShutDown = true
-}
-process.on('SIGINT', kill);
-process.on('SIGTERM', kill);
-
 const args = process.argv.slice(2);
 
 const start = async () => {
@@ -39,30 +25,17 @@ const start = async () => {
     })
     const envHeight: bigint = defaultHeight
 
-    const lastNotifiedEvent = await Event.findOne({
+    const lastNotifiedBlock = await Block.findOne({
         blockStatus: BlockStatus.Success,
-        currency:  getNativeCurrency(network),
+        network:  network,
         isNotified: true
     }).sort({number: 'desc'}).populate('block')
 
-
-    let lastBlockHeight: bigint = lastNotifiedEvent == null ? envHeight : BigInt((lastNotifiedEvent.block as IBlock).number)
-    if (envHeight > lastBlockHeight) {
-        lastBlockHeight = envHeight
-    }
+    let lastBlockHeight: bigint = lastNotifiedBlock == null ? envHeight : (BigInt(lastNotifiedBlock.number))
 
     while (true) {
         try {
             lastBlockHeight = await scan(subscriberUrl, lastBlockHeight, network)
-
-            if (isShutDown) {
-                console.log("--------------------");
-                console.log("Notifier shutdown");
-                console.log("--------------------");
-                process.exit()
-                return
-            }
-
             console.log("Sleep 3 seconds")
             await new Promise(resolve => setTimeout(resolve, 5000));
         } catch (e) {
@@ -81,13 +54,13 @@ async function scan(subscriberUrl: string, lastNotifiedHeight: bigint, network: 
         return lastNotifiedHeight
     }
 
-    for (let blockNumber = lastNotifiedHeight; blockNumber <= BigInt(lastBlock.number); blockNumber++) {
+    for (let blockNumber = lastNotifiedHeight+BigInt(1); blockNumber <= BigInt(lastBlock.number); blockNumber++) {
         const block: IBlock | null = await Block.findOne({
             status: BlockStatus.Success,
             number: String(blockNumber)
         })
 
-        if (block == null) {
+        if (block == null || block.isNotified) {
             continue
         }
 
@@ -124,6 +97,7 @@ async function scan(subscriberUrl: string, lastNotifiedHeight: bigint, network: 
             if (isSuccess) {
                 e.isNotified = true
                 await e.save()
+
                 console.log("Success: " + e.eventId)
             } else if (!hasFailNotification) {
                 hasFailNotification = true
@@ -131,14 +105,13 @@ async function scan(subscriberUrl: string, lastNotifiedHeight: bigint, network: 
             }
         }
 
-        if (isShutDown) {
-            return blockNumber
-        }
-
         if (hasFailNotification) {
             blockNumber--
             continue
         }
+
+        block.isNotified = true
+        await block.save()
     }
 
     return BigInt(lastBlock.number)

@@ -5,7 +5,8 @@ export interface IBlock extends Document {
     hash: string,
     number: string,
     status: BlockStatus,
-    network: Network
+    network: Network,
+    isNotified: boolean
 }
 
 const schema = new Schema({
@@ -13,6 +14,7 @@ const schema = new Schema({
     hash: { type: String, required: true, index: true, unique: true },
     number: { type: String, required: true, index: true},
     status: Number,
-    network: String
+    network: String,
+    isNotified: Boolean
 });
 export const Block = model<IBlock>("block", schema)
