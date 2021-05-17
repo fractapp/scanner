@@ -124,14 +124,26 @@ app.get('/status', async (req, res) => {
         network: Network.Kusama
     }).sort({number: 'desc'})
 
+    const lastNotifiedBlockPolkadot: IBlock | null = await Block.findOne({
+        network: Network.Polkadot,
+        isNotified: true
+    }).sort({number: 'desc'})
+
+    const lastNotifiedBlockKusama: IBlock | null = await Block.findOne({
+        network: Network.Kusama,
+        isNotified: true
+    }).sort({number: 'desc'})
+
     return res.send({
         polkadot: {
             lastHeight: (await polkadotApi.getLastHeight()).toString(),
             lastScannedHeight: lastBlockPolkadot?.number.toString() ?? "0",
+            lastNotifiedHeight: lastNotifiedBlockPolkadot?.number.toString() ?? "0",
         },
         kusama: {
             lastHeight: (await kusamaApi.getLastHeight()).toString(),
-            lastScannedHeight: lastBlockKusama?.number.toString() ?? "0"
+            lastScannedHeight: lastBlockKusama?.number.toString() ?? "0",
+            lastNotifiedHeight: lastNotifiedBlockKusama?.number.toString() ?? "0",
         }
     });
 })
