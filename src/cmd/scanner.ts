@@ -133,6 +133,7 @@ async function scan(fromHeight: bigint, toHeight: bigint, network: Network, adap
             number: blockNumber,
             status: lastFinalizedHeight >= blockNumber ? BlockStatus.Success : BlockStatus.Pending,
             network: network,
+            isNotified: false,
         })
 
         const events: Array<IEvent> = []
