@@ -6,9 +6,9 @@ dotenv.config()
 
 const args = process.argv.slice(2);
 
-const checkTimeout = 5 * 60 * 1000 / 3
+const checkTimeout = 5 * 60 * 1000
 const statusOkMsgTimeout = 120 * 60 * 1000
-const statusOkErrorTimeout = 20 * 60 * 1000 /20
+const statusOkErrorTimeout = 20 * 60 * 1000
 
 const scannedBlockOffset = 100
 const notifiedBlockOffset = 100
@@ -76,7 +76,7 @@ const start = async () => {
         lastIsOk = info.isOk
 
         console.log("Sleep")
-        await new Promise(resolve => setTimeout(resolve, checkTimeout ));
+        await new Promise(resolve => setTimeout(resolve, checkTimeout));
     }
 }
 
