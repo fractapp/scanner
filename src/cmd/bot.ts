@@ -12,7 +12,6 @@ const statusOkErrorTimeout = 20 * 60 * 1000
 
 const scannedBlockOffset = 100
 const notifiedBlockOffset = 100
-const timePriceOffset = 60
 
 const start = async () => {
     const token =  args[0]
@@ -102,7 +101,7 @@ async function checkStatus(scannerApiUrl: string): Promise<{
         ) {
             return {isOk: false, error: "🔴👀 Notified height lags behind"}
         }
-    }catch (e) {
+    } catch (e) {
         return {isOk: false, error: "🔴 Scanner Api not available"}
     }
 
