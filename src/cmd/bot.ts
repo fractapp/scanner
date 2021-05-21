@@ -60,6 +60,7 @@ const start = async () => {
         let info = await checkStatus(scannerApiUrl)
 
         const now = new Date().getTime()
+        console.log("is OK: " + info.isOk)
         if (info.isOk) {
             if (now - lastStatusOkMsgTimeout >= statusOkMsgTimeout || !lastIsOk) {
                 console.log("Everything works well!")
