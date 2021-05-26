@@ -85,7 +85,7 @@ async function checkStatus(scannerApiUrl: string): Promise<{
     error: string
 }> {
     try {
-        const rs = await axios.get(`${scannerApiUrl}/status`, { timeout: 1000 })
+        const rs = await axios.get(`${scannerApiUrl}/status`, { timeout: 20000 })
         if (rs.status != 200) {
             return {isOk: false, error: "🔴 Scanner Api not available"}
         }
