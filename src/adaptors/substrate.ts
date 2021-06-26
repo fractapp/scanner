@@ -52,6 +52,10 @@ export class SubstrateAdaptor implements Adaptor {
     }
 
     async getTxsAndEvents(blockHash: string): Promise<Array<TxAndEvents>> {
+        if (blockHash == '0xdc25e6ff4402f0bfb78d007cf364c9dded281b92f05fcb9aa22d067bdc7d5ccc') {
+            return []
+        }
+
         const block = await this._api.rpc.chain.getBlock(blockHash)
         const records = await this._api.query.system.events.at(block.block.header.hash);
 
