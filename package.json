@@ -17,11 +17,11 @@
     "devBot": "ts-node src/cmd/bot.ts"
   },
   "dependencies": {
-    "@polkadot/api": "^4.16.1",
+    "@polkadot/api": "^4.16.2",
     "@types/express": "^4.17.12",
     "@types/mongoose": "^5.11.97",
     "@types/morgan": "^1.9.2",
-    "@types/node": "^15.12.4",
+    "@types/node": "^15.12.5",
     "@types/node-telegram-bot-api": "^0.51.1",
     "axios": "^0.21.1",
     "dotenv": "^10.0.0",
