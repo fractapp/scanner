@@ -53,7 +53,7 @@ async function scan(subscriberUrl: string, lastNotifiedHeight: bigint, network: 
         isNotified: false
     }).sort({number: 'desc'})
 
-    if (lastBlock == null) {
+    if (lastBlock == null || BigInt(lastBlock.number) < lastNotifiedHeight) {
         return lastNotifiedHeight
     }
 
