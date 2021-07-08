@@ -29,12 +29,14 @@ const start = async () => {
         blockStatus: BlockStatus.Success,
         network:  network,
         isNotified: true
-    }).sort({number: 'desc'}).populate('block')
+    }).sort({number: 'desc'})
 
     let lastBlockHeight: bigint = lastNotifiedBlock == null ? envHeight : (BigInt(lastNotifiedBlock.number))
+    console.log("Last Block Height: " + lastBlockHeight)
 
     while (true) {
         try {
+            console.log("Start scan: " + lastBlockHeight)
             lastBlockHeight = await scan(subscriberUrl, lastBlockHeight, network)
             console.log("Sleep 3 seconds")
             await new Promise(resolve => setTimeout(resolve, 5000));
@@ -47,7 +49,8 @@ const start = async () => {
 async function scan(subscriberUrl: string, lastNotifiedHeight: bigint, network: Network): Promise<bigint> {
     const lastBlock: IBlock | null = await Block.findOne({
         status: BlockStatus.Success,
-        network: network
+        network: network,
+        isNotified: false
     }).sort({number: 'desc'})
 
     if (lastBlock == null) {
@@ -61,6 +64,7 @@ async function scan(subscriberUrl: string, lastNotifiedHeight: bigint, network: 
         })
 
         if (block == null || block.isNotified) {
+            console.log("Skip block (isNotified: " + block?.isNotified ?? "null" + "): " + blockNumber)
             continue
         }
 
