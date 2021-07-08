@@ -64,7 +64,7 @@ async function scan(subscriberUrl: string, lastNotifiedHeight: bigint, network: 
         })
 
         if (block == null || block.isNotified) {
-            console.log("Skip block (isNotified: " + block?.isNotified ?? "null" + "): " + blockNumber)
+            console.log("Skip block: " + blockNumber)
             continue
         }
 
