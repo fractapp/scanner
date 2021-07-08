@@ -26,7 +26,7 @@ const start = async () => {
     const envHeight: bigint = defaultHeight
 
     const lastNotifiedBlock = await Block.findOne({
-        blockStatus: BlockStatus.Success,
+        status: BlockStatus.Success,
         network:  network,
         isNotified: true
     }).sort({number: 'desc'})
