@@ -76,7 +76,7 @@ const start = async () => {
     }
 }
 
-async function scan(fromHeight: bigint, toHeight: bigint, network: Network, adaptor: Adaptor) {
+export async function scan(fromHeight: bigint, toHeight: bigint, network: Network, adaptor: Adaptor) {
     const lastFinalizedHeight = await adaptor.getLastFinalizedHeight()
 
     const blocks = new Map<bigint, {
