@@ -1,10 +1,9 @@
 import { scan } from '../../src/cmd/scan';
 import { BlockStatus, Network, TxStatus } from '../../src/models/enums/statuses';
 
+const mongoogse = require('mongoose');
 const mockingoose = require('mockingoose');
 const modelBlock = require('../../src/models/db/block');
-const modelTransaction = require('../../src/models/db/transactions');
-const modelEvent = require('../../src/models/db/event');
 
 jest.mock('@polkadot/api', () => ({
     ApiPromise: {
@@ -86,7 +85,11 @@ const adaptor2 = {
 it('test scan 1', async () => {
     await mockingoose(modelBlock.Block).toReturn(null, 'findOne');
     await scan(123n, 124n, Network.Polkadot, adaptor2);
-    expect(modelBlock.Block.create).toBeCalledTimes(1);
+    
+    expect(adaptor2.getLastFinalizedHeight).toBeCalledTimes(1);
+    expect(adaptor2.getBlock).toBeCalledTimes(2);
+    expect(adaptor2.getTxsAndEvents).toBeCalledTimes(2);
+    expect(adaptor2.getCurrency).toBeCalledTimes(4);
 });
 it('test scan 2', async () => {
     let block1 = new modelBlock.Block({
@@ -106,7 +109,10 @@ it('test scan 2', async () => {
 
     await mockingoose(modelBlock.Block).toReturn(block1, 'findOne');
     await mockingoose(modelBlock.Block).toReturn(block2, 'findOne');
+    await scan(123n, 124n, Network.Polkadot, adaptor1)
+    
+    expect(adaptor1.getLastFinalizedHeight).toBeCalledTimes(1);
+    expect(adaptor1.getBlock).toBeCalledTimes(2);
 
-    expect(await scan(123n, 124n, Network.Polkadot, adaptor1)).toStrictEqual('');
 });
 
