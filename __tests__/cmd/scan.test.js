@@ -1,7 +1,8 @@
+
 import { scan } from '../../src/cmd/scan';
 import { BlockStatus, Network, TxStatus } from '../../src/models/enums/statuses';
 
-const mongoogse = require('mongoose');
+const mongoose = require('mongoose');
 const mockingoose = require('mockingoose');
 const modelBlock = require('../../src/models/db/block');
 
@@ -83,9 +84,19 @@ const adaptor2 = {
 }
 
 it('test scan 1', async () => {
-    await mockingoose(modelBlock.Block).toReturn(null, 'findOne');
+    const spyBlock = jest.spyOn(modelBlock.Block, 'findOne');
+    const spyCreateBlock = jest.spyOn(mongoose.model('block'), 'create');
+    const spyCreateTransaction = jest.spyOn(mongoose.model('transaction'), 'create');
+    const spyCreateEvent = jest.spyOn(mongoose.model('event'), 'create');
+
+    jest.spyOn(modelBlock.Block, 'findOne').mockReturnValue(null);
+
     await scan(123n, 124n, Network.Polkadot, adaptor2);
-    
+
+    expect(spyCreateBlock).toBeCalled();
+    expect(spyCreateTransaction).toBeCalled();
+    expect(spyCreateEvent).toBeCalled();
+    expect(spyBlock).toBeCalledTimes(2);
     expect(adaptor2.getLastFinalizedHeight).toBeCalledTimes(1);
     expect(adaptor2.getBlock).toBeCalledTimes(2);
     expect(adaptor2.getTxsAndEvents).toBeCalledTimes(2);
@@ -107,12 +118,21 @@ it('test scan 2', async () => {
         isNotified: true
     });
 
-    await mockingoose(modelBlock.Block).toReturn(block1, 'findOne');
-    await mockingoose(modelBlock.Block).toReturn(block2, 'findOne');
+    const spyBlockFind = jest.spyOn(modelBlock.Block, 'findOne');
+    const spyBlockUpdateMany = jest.spyOn(modelBlock.Block, 'updateMany');
+    const spyBlockUpdateOne = jest.spyOn(modelBlock.Block, 'updateOne');
+
+    jest.spyOn(modelBlock.Block, 'findOne').mockReturnValue(block1);
+    jest.spyOn(modelBlock.Block, 'findOne').mockReturnValue(block2);
+    await modelBlock.Block.create.mockImplementation();
+
     await scan(123n, 124n, Network.Polkadot, adaptor1)
-    
+
+    expect(spyBlockFind).toBeCalledTimes(4);
+    expect(spyBlockUpdateMany).toBeCalledTimes(1);
+    expect(spyBlockUpdateOne).toBeCalledTimes(1);
+
     expect(adaptor1.getLastFinalizedHeight).toBeCalledTimes(1);
     expect(adaptor1.getBlock).toBeCalledTimes(2);
 
 });
-

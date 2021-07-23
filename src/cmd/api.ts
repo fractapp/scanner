@@ -147,3 +147,5 @@ app.get('/status', async (req, res) => {
         }
     });
 })
+
+module.exports = app;
