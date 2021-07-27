@@ -3,7 +3,6 @@ import { Currency } from '../../src/models/enums/currency';
 import { SubstrateAdaptor } from '../../src/adaptors/substrate';
 import request from "supertest";
 
-const Adaptor = require('../../src/adaptors/adaptor')
 const app = require('../../src/cmd/api');
 const mongoose = require('mongoose');
 const modelBlock = require('../../src/models/db/block');
@@ -29,14 +28,10 @@ jest.mock('../../src/adaptors/adaptor', () => ({
     },
 }));
 
-beforeEach(async () => {
-    await SubstrateAdaptor.getInstance.mockReturnValueOnce({
+beforeAll(() => {
+    SubstrateAdaptor.getInstance.mockReturnValue({
         getBalance: jest.fn(() => 231),
         getLastHeight: jest.fn(() => 231n), 
-    });
-    await SubstrateAdaptor.getInstance.mockReturnValueOnce({
-        getBalance: jest.fn(() => 244),
-        getLastHeight: jest.fn(() => 244n), 
     });
 });
 afterEach(() => {
@@ -98,15 +93,6 @@ const events = [
 ];
 const txs = [tx1, tx2];
 
-/*it('test api 3', async () => {
-    
-    const response = await request(app)
-        .get('/substrate/balance/:address')
-        .query({
-            currency: 'DOT'
-    });
-    expect(response.text).toBe("{\"value\":\"231\"}");
-});*/
 
 it('test api 1', async () => {
     const spyFind = jest.spyOn(modelTransaction.Transaction, 'find').mockReturnValueOnce({
@@ -143,6 +129,11 @@ it('test api 2', async () => {
     expect(spy).toBeCalledTimes(1);
     expect(response.text).toStrictEqual("[{\"id\":\"eventId\",\"hash\":\"hash\",\"currency\":0,\"to\":\"to\",\"from\":\"from\",\"value\":\"value\",\"fee\":\"fee\",\"timestamp\":12345,\"status\":1}]");
 });
+it('test api 3', async () => {
+    
+    const response = await request(app).get('/substrate/balance/:address');
+     expect(response.text).toBe("{\"value\":\"231\"}");
+});
 
 it('test api 4', async () => {    
     const spy = jest.spyOn(modelBlock.Block, 'findOne');
@@ -161,5 +152,5 @@ it('test api 4', async () => {
     const response = await request(app).get('/status');
 
     expect(spy).toBeCalledTimes(4);
-    expect(response.text).toBe("{\"polkadot\":{\"lastHeight\":\"231\",\"lastScannedHeight\":\"126\",\"lastNotifiedHeight\":\"126\"},\"kusama\":{\"lastHeight\":\"244\",\"lastScannedHeight\":\"126\",\"lastNotifiedHeight\":\"126\"}}");
+    expect(response.text).toBe("{\"polkadot\":{\"lastHeight\":\"231\",\"lastScannedHeight\":\"126\",\"lastNotifiedHeight\":\"126\"},\"kusama\":{\"lastHeight\":\"231\",\"lastScannedHeight\":\"126\",\"lastNotifiedHeight\":\"126\"}}");
 });
