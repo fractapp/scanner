@@ -3,6 +3,8 @@ import {TxStatus} from "../models/enums/statuses";
 import {Transaction} from "../models/db/transactions";
 
 export interface Adaptor {
+    getBaseApi(): any
+
     getCurrency(): Currency,
 
     getLastHeight(): Promise<bigint>

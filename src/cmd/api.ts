@@ -10,6 +10,7 @@ import morgan from 'morgan'
 import {BlockStatus, Network, TxStatus} from "../models/enums/statuses";
 import {SubstrateAdaptor} from "../adaptors/substrate";
 import {Adaptor} from "../adaptors/adaptor";
+import {ApiPromise} from "@polkadot/api";
 
 const app = express()
 dotenv.config()
@@ -101,7 +102,7 @@ app.get('/transactions/:address', async (req, res) => {
 })
 
 app.get('/substrate/balance/:address', async (req, res) => {
-    const address = req.params.address
+    const address: string = req.params.address
     const currency: Currency = req.query.currency == undefined ? Currency.DOT : toCurrency(req.query.currency as string)
 
     const api = apiByCurrency.get(currency)!
@@ -109,6 +110,63 @@ app.get('/substrate/balance/:address', async (req, res) => {
 
     return res.send({
         value: String(balance)
+    });
+})
+
+app.get('/substrate/fee/:sender/:recipient', async (req, res) => {
+    const sender: string = req.params.sender
+    const recipient: string = req.params.recipient
+    const currency: Currency = req.query.currency == undefined ? Currency.DOT : toCurrency(req.query.currency as string)
+    const value: string = req.query.value as string
+
+    const api = apiByCurrency.get(currency)!
+    const baseApi: ApiPromise = api.getBaseApi()
+
+    const info = await baseApi.tx.balances
+        .transfer(recipient, value)
+        .paymentInfo(sender);
+
+    return res.send({
+        fee: info.partialFee.toBn().toString()
+    });
+})
+
+app.get('/substrate/base/:sender', async (req, res) => {
+    const sender: string = req.params.sender
+    const currency: Currency = req.query.currency == undefined ? Currency.DOT : toCurrency(req.query.currency as string)
+
+    const api = apiByCurrency.get(currency)!
+    const baseApi: ApiPromise = api.getBaseApi()
+
+    const blockHeader = await baseApi.rpc.chain.getHeader()
+    const genesisHash = await baseApi.rpc.chain.getBlockHash(0)
+    const metadataRpc = await baseApi.rpc.state.getMetadata()
+    const runtime  = await baseApi.rpc.state.getRuntimeVersion()
+    const nonce = await baseApi.rpc.system.accountNextIndex(sender)
+
+    return res.send({
+        blockNumber: blockHeader.number.toNumber(),
+        blockHash: blockHeader.hash.toHex(),
+        genesisHash: genesisHash.toHex(),
+        metadata: metadataRpc.toHex(),
+
+        specVersion: runtime.specVersion.toBn().toNumber(),
+        transactionVersion: runtime.transactionVersion.toBn().toNumber(),
+
+        nonce: nonce.toBn().toNumber(),
+    });
+})
+
+app.post('/substrate/broadcast', async (req, res) => {
+    const tx: string = req.query.tx as string
+    const currency: Currency = req.query.currency == undefined ? Currency.DOT : toCurrency(req.query.currency as string)
+
+    const api = apiByCurrency.get(currency)!
+    const baseApi: ApiPromise = api.getBaseApi()
+    const info = await baseApi.rpc.author.submitExtrinsic(baseApi.createType('Extrinsic', tx))
+
+    return res.send({
+        hash: info.toHex()
     });
 })
 

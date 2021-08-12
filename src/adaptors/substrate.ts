@@ -1,7 +1,7 @@
 import {Currency} from "../models/enums/currency";
 import {ApiPromise, WsProvider} from "@polkadot/api";
 import * as polkaTypes from "@polkadot/types/interfaces/system/types";
-import {Adaptor, Block, TxAndEvents, Event} from "./adaptor";
+import {Adaptor, Block, TxAndEvents} from "./adaptor";
 import {TxStatus} from "../models/enums/statuses";
 
 export class SubstrateAdaptor implements Adaptor {
@@ -20,7 +20,7 @@ export class SubstrateAdaptor implements Adaptor {
         })()
     }
 
-    public getApi(): ApiPromise {
+    public getBaseApi(): any {
         return this._api
     }
 
