@@ -26,10 +26,8 @@ const port = Number(process.env["PORT"] as string)
 const apiByCurrency = new  Map<Currency, Adaptor>()
 
 mongoose.connect(connectionString, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    useFindAndModify: true,
-    useCreateIndex: true
+    autoIndex: true,
+    autoCreate: true
 }, async function () {
     apiByCurrency.set(Currency.DOT, await SubstrateAdaptor.getInstance(process.env["POLKADOT_RPC_URL"] as string, Currency.DOT))
     apiByCurrency.set(Currency.KSM, await SubstrateAdaptor.getInstance(process.env["KUSAMA_RPC_URL"] as string, Currency.KSM))

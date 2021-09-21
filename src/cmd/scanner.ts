@@ -33,10 +33,8 @@ const start = async () => {
     }
 
     await mongoose.connect(connectionString, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        useFindAndModify: true,
-        useCreateIndex: true
+        autoIndex: true,
+        autoCreate: true
     })
     const envHeight: bigint = BigInt(defaultHeight)
 
@@ -70,7 +68,7 @@ const start = async () => {
             }
             await scan(startHeight, toHeight, network, adaptor)
         } catch (e) {
-            console.log("Error: " + e.toString())
+            console.log("Error: " + (e instanceof Error).toString())
             process.exit(1)
         }
     }
