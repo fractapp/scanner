@@ -8,6 +8,7 @@ export enum TxStatusRs {
 export type TransactionRs = {
     id: string,
     hash: string,
+    action: number,
     from: string,
     to: string,
     fee: string,

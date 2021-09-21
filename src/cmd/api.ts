@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 import {Block, IBlock} from "../models/db/block";
 import {ITransaction, Transaction} from "../models/db/transactions";
 import morgan from 'morgan'
-import {BlockStatus, Network, TxStatus} from "../models/enums/statuses";
+import {BlockStatus, Network, TxAction, TxStatus} from "../models/enums/status";
 import {SubstrateAdaptor} from "../adaptors/substrate";
 import {Adaptor} from "../adaptors/adaptor";
 import {ApiPromise} from "@polkadot/api";
@@ -23,16 +23,15 @@ const connectionString = process.env["MONGODB_CONNECTION"] as string
 const host = process.env["HOST"] as string
 const port = Number(process.env["PORT"] as string)
 
-const apiByCurrency = new  Map<Currency, Adaptor>()
-
+const apiByNetwork = new  Map<Network, Adaptor>()
 mongoose.connect(connectionString, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
     useFindAndModify: true,
     useCreateIndex: true
 }, async function () {
-    apiByCurrency.set(Currency.DOT, await SubstrateAdaptor.getInstance(process.env["POLKADOT_RPC_URL"] as string, Currency.DOT))
-    apiByCurrency.set(Currency.KSM, await SubstrateAdaptor.getInstance(process.env["KUSAMA_RPC_URL"] as string, Currency.KSM))
+    apiByNetwork.set(Network.Polkadot, await SubstrateAdaptor.getInstance(process.env["POLKADOT_RPC_URL"] as string, Currency.DOT))
+    apiByNetwork.set(Network.Kusama, await SubstrateAdaptor.getInstance(process.env["KUSAMA_RPC_URL"] as string, Currency.KSM))
 
     app.use(function(err: any, req: any, res: any, next: any) {
         console.error(err.stack);
@@ -88,6 +87,7 @@ app.get('/transactions/:address', async (req, res) => {
 
         txs.push({
             id: event.eventId,
+            action: event.action == undefined ? TxAction.Transfer : event.action,
             hash: (event.transaction as ITransaction).hash,
             currency: event.currency,
             to: event.to,
@@ -105,63 +105,71 @@ app.get('/substrate/balance/:address', async (req, res) => {
     const address: string = req.params.address
     const currency: Currency = req.query.currency == undefined ? Currency.DOT : toCurrency(req.query.currency as string)
 
-    const api = apiByCurrency.get(currency)!
+    const api = apiByNetwork.get(currency == Currency.DOT ? Network.Polkadot : Network.Kusama)!
     const balance = await api.getBalance(address)
 
     return res.send({
-        value: String(balance)
+        total: String(balance.total),
+        transferable: String(balance.transferable),
+        payableForFee: String(balance.payableForFee),
+        staking: String(balance.staking)
     });
 })
 
-app.get('/substrate/fee/:sender/:recipient', async (req, res) => {
-    const sender: string = req.params.sender
-    const recipient: string = req.params.recipient
-    const currency: Currency = req.query.currency == undefined ? Currency.DOT : toCurrency(req.query.currency as string)
-    const value: string = req.query.value as string
+app.get('/substrate/fee', async (req, res) => {
+    const hexTx: string = req.query.tx as string
+    const network: Network = req.query.network == undefined ? Network.Polkadot : req.query.network as Network
 
-    const api = apiByCurrency.get(currency)!
+    const api = apiByNetwork.get(network)!
     const baseApi: ApiPromise = api.getBaseApi()
 
-    const info = await baseApi.tx.balances
-        .transfer(recipient, value)
-        .paymentInfo(sender);
+    const info = await baseApi.rpc.payment.queryInfo(hexTx)
 
     return res.send({
         fee: info.partialFee.toBn().toString()
     });
 })
 
-app.get('/substrate/base/:sender', async (req, res) => {
-    const sender: string = req.params.sender
-    const currency: Currency = req.query.currency == undefined ? Currency.DOT : toCurrency(req.query.currency as string)
+app.get('/substrate/base', async (req, res) => {
+    const network: Network = req.query.network == undefined ? Network.Polkadot : req.query.network as Network
 
-    const api = apiByCurrency.get(currency)!
+    const api = apiByNetwork.get(network)!
+    const baseApi: ApiPromise = api.getBaseApi()
+
+    const genesisHash = await baseApi.rpc.chain.getBlockHash(0)
+    const metadataRpc = baseApi.runtimeMetadata
+    const runtime  = baseApi.runtimeVersion
+
+    return res.send({
+        genesisHash: genesisHash.toHex(),
+        metadata: metadataRpc.toHex(),
+        specVersion: runtime.specVersion.toBn().toNumber(),
+        transactionVersion: runtime.transactionVersion.toBn().toNumber(),
+    });
+})
+
+app.get('/substrate/txBase/:sender', async (req, res) => {
+    const sender: string = req.params.sender
+    const network: Network = req.query.network == undefined ? Network.Polkadot : req.query.network as Network
+
+    const api = apiByNetwork.get(network)!
     const baseApi: ApiPromise = api.getBaseApi()
 
     const blockHeader = await baseApi.rpc.chain.getHeader()
-    const genesisHash = await baseApi.rpc.chain.getBlockHash(0)
-    const metadataRpc = await baseApi.rpc.state.getMetadata()
-    const runtime  = await baseApi.rpc.state.getRuntimeVersion()
     const nonce = await baseApi.rpc.system.accountNextIndex(sender)
 
     return res.send({
         blockNumber: blockHeader.number.toNumber(),
         blockHash: blockHeader.hash.toHex(),
-        genesisHash: genesisHash.toHex(),
-        metadata: metadataRpc.toHex(),
-
-        specVersion: runtime.specVersion.toBn().toNumber(),
-        transactionVersion: runtime.transactionVersion.toBn().toNumber(),
-
         nonce: nonce.toBn().toNumber(),
     });
 })
 
 app.post('/substrate/broadcast', async (req, res) => {
     const tx: string = req.query.tx as string
-    const currency: Currency = req.query.currency == undefined ? Currency.DOT : toCurrency(req.query.currency as string)
+    const network: Network = req.query.network == undefined ? Network.Polkadot : req.query.network as Network
 
-    const api = apiByCurrency.get(currency)!
+    const api = apiByNetwork.get(network)!
     const baseApi: ApiPromise = api.getBaseApi()
     const info = await baseApi.rpc.author.submitExtrinsic(baseApi.createType('Extrinsic', tx))
 
@@ -171,8 +179,8 @@ app.post('/substrate/broadcast', async (req, res) => {
 })
 
 app.get('/status', async (req, res) => {
-    const polkadotApi = apiByCurrency.get(Currency.DOT)!
-    const kusamaApi = apiByCurrency.get(Currency.KSM)!
+    const polkadotApi = apiByNetwork.get(Network.Polkadot)!
+    const kusamaApi = apiByNetwork.get(Network.Kusama)!
 
     const lastBlockPolkadot: IBlock | null = await Block.findOne({
         network: Network.Polkadot

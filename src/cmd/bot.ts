@@ -17,7 +17,6 @@ const start = async () => {
     const token =  args[0]
     const chatId =  args[1]
     const scannerApiUrl =  args[2]
-    const fractappApiUrl =  args[3]
 
     const bot = new TelegramBot(token, {polling: true});
     bot.on('message', (msg) => {

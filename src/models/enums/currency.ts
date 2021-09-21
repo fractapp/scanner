@@ -1,4 +1,4 @@
-import {Network} from "./statuses";
+import {Network} from "./status";
 
 export enum Currency {
     DOT = 0,

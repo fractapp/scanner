@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import {Event, IEvent} from "../models/db/event";
 import {getNativeCurrency} from "../models/enums/currency";
 import {ITransaction, Transaction} from "../models/db/transactions";
-import {BlockStatus, Network, TxStatus} from "../models/enums/statuses";
+import {BlockStatus, Network, TxStatus} from "../models/enums/status";
 import {Block, IBlock} from "../models/db/block";
 import axios from 'axios'
 

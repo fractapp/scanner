@@ -1,5 +1,5 @@
 import { model, Schema, Document} from 'mongoose'
-import {BlockStatus, Network} from "../enums/statuses";
+import {BlockStatus, Network} from "../enums/status";
 
 export interface IBlock extends Document {
     hash: string,

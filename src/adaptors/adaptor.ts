@@ -1,5 +1,5 @@
 import {Currency} from "../models/enums/currency";
-import {TxStatus} from "../models/enums/statuses";
+import {TxAction, TxStatus} from "../models/enums/status";
 import {Transaction} from "../models/db/transactions";
 
 export interface Adaptor {
@@ -15,7 +15,14 @@ export interface Adaptor {
 
     getTxsAndEvents(hash: string): Promise<Array<TxAndEvents>>
 
-    getBalance(address: string): Promise<bigint>
+    getBalance(address: string): Promise<Balance>
+}
+
+export type Balance = {
+    total: bigint,
+    transferable: bigint,
+    payableForFee: bigint,
+    staking: bigint
 }
 
 export type Block = {
@@ -41,4 +48,5 @@ export type Event = {
     to: string,
     value: string,
     fee: string
+    action: TxAction
 }

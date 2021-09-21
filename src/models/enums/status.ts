@@ -1,3 +1,10 @@
+export enum TxAction {
+    Transfer = 0,
+    StakingReward,
+    StakingWithdrawn,
+    Staking
+}
+
 export enum TxStatus {
     Success = 0,
     Fail = 1

@@ -1,6 +1,6 @@
 import { Types, Schema, model, Document } from 'mongoose'
 import {Block, IBlock} from "./block";
-import {TxStatus} from "../enums/statuses";
+import {TxStatus} from "../enums/status";
 
 export interface ITransaction extends Document {
     txId: string,

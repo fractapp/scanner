@@ -4,7 +4,7 @@ import {Event, IEvent} from "../models/db/event";
 import {getNativeCurrency} from "../models/enums/currency";
 import {ITransaction, Transaction} from "../models/db/transactions";
 import {Adaptor, TxAndEvents} from "../adaptors/adaptor";
-import {BlockStatus, Network} from "../models/enums/statuses";
+import {BlockStatus, Network} from "../models/enums/status";
 import {Block, IBlock} from "../models/db/block";
 import {SubstrateAdaptor} from "../adaptors/substrate";
 
@@ -155,6 +155,7 @@ async function scan(fromHeight: bigint, toHeight: bigint, network: Network, adap
                     eventId: event.id,
                     block: newBlock._id,
                     transaction: tx._id,
+                    action: event.action,
                     from: event.from,
                     to: event.to,
                     fee: String(event.fee),
