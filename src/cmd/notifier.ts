@@ -18,10 +18,8 @@ const start = async () => {
     const defaultHeight = args[1] != "" ? BigInt(args[1] as string) : BigInt(1)
 
     await mongoose.connect(connectionString, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        useFindAndModify: true,
-        useCreateIndex: true
+        autoIndex: true,
+        autoCreate: true
     })
     const envHeight: bigint = defaultHeight
 
@@ -41,7 +39,7 @@ const start = async () => {
             console.log("Sleep 3 seconds")
             await new Promise(resolve => setTimeout(resolve, 5000));
         } catch (e) {
-            console.log("Error: " + e.toString())
+            console.log("Error: " + (e instanceof Error).toString())
         }
     }
 }

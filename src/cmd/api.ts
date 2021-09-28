@@ -1,4 +1,4 @@
-import express from 'express';
+import express, {NextFunction, Request, Response} from 'express';
 import {Event, IEvent} from "../models/db/event";
 import {Currency, toCurrency} from "../models/enums/currency";
 import {TransactionRs, TxStatusRs} from '../models/response/transactions'
@@ -11,6 +11,7 @@ import {BlockStatus, Network, TxAction, TxStatus} from "../models/enums/status";
 import {SubstrateAdaptor} from "../adaptors/substrate";
 import {Adaptor} from "../adaptors/adaptor";
 import {ApiPromise} from "@polkadot/api";
+import asyncHandler from 'express-async-handler';
 
 const app = express()
 dotenv.config()
@@ -25,14 +26,11 @@ const port = Number(process.env["PORT"] as string)
 
 const apiByNetwork = new  Map<Network, Adaptor>()
 mongoose.connect(connectionString, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    useFindAndModify: true,
-    useCreateIndex: true
+    autoIndex: true,
+    autoCreate: true
 }, async function () {
     apiByNetwork.set(Network.Polkadot, await SubstrateAdaptor.getInstance(process.env["POLKADOT_RPC_URL"] as string, Currency.DOT))
     apiByNetwork.set(Network.Kusama, await SubstrateAdaptor.getInstance(process.env["KUSAMA_RPC_URL"] as string, Currency.KSM))
-
     app.use(function(err: any, req: any, res: any, next: any) {
         console.error(err.stack);
         res.status(500).send();
@@ -42,7 +40,7 @@ mongoose.connect(connectionString, {
     })
 })
 
-app.get('/transaction/:hash', async (req, res) => {
+app.get('/transaction/:hash', asyncHandler(async (req, res) => {
     const hash = req.params.hash
     let txs: Array<ITransaction> = await Transaction.find({
         hash: hash
@@ -61,9 +59,9 @@ app.get('/transaction/:hash', async (req, res) => {
     return res.send({
         status: status
     });
-})
+}))
 
-app.get('/transactions/:address', async (req, res) => {
+app.get('/transactions/:address', asyncHandler(async (req, res) => {
     const txs: Array<TransactionRs> = []
 
     const address = req.params.address
@@ -99,9 +97,9 @@ app.get('/transactions/:address', async (req, res) => {
         })
     }
     return res.send(txs);
-})
+}))
 
-app.get('/substrate/balance/:address', async (req, res) => {
+app.get('/substrate/balance/:address', asyncHandler(async (req, res) => {
     const address: string = req.params.address
     const currency: Currency = req.query.currency == undefined ? Currency.DOT : toCurrency(req.query.currency as string)
 
@@ -114,9 +112,9 @@ app.get('/substrate/balance/:address', async (req, res) => {
         payableForFee: String(balance.payableForFee),
         staking: String(balance.staking)
     });
-})
+}))
 
-app.get('/substrate/fee', async (req, res) => {
+app.get('/substrate/fee', asyncHandler(async (req, res) => {
     const hexTx: string = req.query.tx as string
     const network: Network = req.query.network == undefined ? Network.Polkadot : req.query.network as Network
 
@@ -128,9 +126,9 @@ app.get('/substrate/fee', async (req, res) => {
     return res.send({
         fee: info.partialFee.toBn().toString()
     });
-})
+}))
 
-app.get('/substrate/base', async (req, res) => {
+app.get('/substrate/base', asyncHandler(async (req, res) => {
     const network: Network = req.query.network == undefined ? Network.Polkadot : req.query.network as Network
 
     const api = apiByNetwork.get(network)!
@@ -146,9 +144,9 @@ app.get('/substrate/base', async (req, res) => {
         specVersion: runtime.specVersion.toBn().toNumber(),
         transactionVersion: runtime.transactionVersion.toBn().toNumber(),
     });
-})
+}))
 
-app.get('/substrate/txBase/:sender', async (req, res) => {
+app.get('/substrate/txBase/:sender', asyncHandler(async (req, res) => {
     const sender: string = req.params.sender
     const network: Network = req.query.network == undefined ? Network.Polkadot : req.query.network as Network
 
@@ -163,9 +161,9 @@ app.get('/substrate/txBase/:sender', async (req, res) => {
         blockHash: blockHeader.hash.toHex(),
         nonce: nonce.toBn().toNumber(),
     });
-})
+}))
 
-app.post('/substrate/broadcast', async (req, res) => {
+app.post('/substrate/broadcast', asyncHandler(async (req, res) => {
     const tx: string = req.query.tx as string
     const network: Network = req.query.network == undefined ? Network.Polkadot : req.query.network as Network
 
@@ -176,9 +174,9 @@ app.post('/substrate/broadcast', async (req, res) => {
     return res.send({
         hash: info.toHex()
     });
-})
+}))
 
-app.get('/status', async (req, res) => {
+app.get('/status', asyncHandler(async (req, res, next) => {
     const polkadotApi = apiByNetwork.get(Network.Polkadot)!
     const kusamaApi = apiByNetwork.get(Network.Kusama)!
 
@@ -212,4 +210,4 @@ app.get('/status', async (req, res) => {
             lastNotifiedHeight: lastNotifiedBlockKusama?.number.toString() ?? "0",
         }
     });
-})
+}))
