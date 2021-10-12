@@ -1,8 +1,12 @@
 export enum TxAction {
-    Transfer = 0,
+    Transfer,
     StakingReward,
+    StakingCreateWithdrawalRequest,
     StakingWithdrawn,
-    Staking
+    StakingOpenDeposit,
+    StakingAddAmount,
+    ConfirmWithdrawal,
+    UpdateNomination
 }
 
 export enum TxStatus {

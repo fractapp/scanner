@@ -128,6 +128,24 @@ app.get('/substrate/fee', asyncHandler(async (req, res) => {
     });
 }))
 
+
+app.get('/substrate/transfer/fee', asyncHandler(async (req, res) => {
+    const sender: string = req.query.sender as string
+    const receiver: string = req.query.receiver as string
+    const value: string = req.query.value as string
+    const isFullBalance: string = req.query.isFullBalance as string
+    const network: Network = req.query.network == undefined ? Network.Polkadot : req.query.network as Network
+
+    const api = apiByNetwork.get(network)!
+    const baseApi: ApiPromise = api.getBaseApi()
+
+    const tx = isFullBalance ? await baseApi.tx.balances.transfer(receiver, value) : await baseApi.tx.balances.transferKeepAlive(receiver, value);
+    const info = await tx.paymentInfo(sender)
+    return res.send({
+        fee: info.partialFee.toBn().toString()
+    });
+}))
+
 app.get('/substrate/base', asyncHandler(async (req, res) => {
     const network: Network = req.query.network == undefined ? Network.Polkadot : req.query.network as Network
 

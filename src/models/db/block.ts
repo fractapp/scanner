@@ -3,7 +3,7 @@ import {BlockStatus, Network} from "../enums/status";
 
 export interface IBlock extends Document {
     hash: string,
-    number: string,
+    number: number,
     status: BlockStatus,
     network: Network,
     isNotified: boolean
@@ -12,7 +12,7 @@ export interface IBlock extends Document {
 const schema = new Schema({
     _id: Schema.Types.ObjectId,
     hash: { type: String, required: true, index: true, unique: true },
-    number: { type: String, required: true, index: true},
+    number: { type: Number, required: true, index: true},
     status: Number,
     network: String,
     isNotified: Boolean

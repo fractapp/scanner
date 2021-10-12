@@ -68,7 +68,7 @@ const start = async () => {
             }
             await scan(startHeight, toHeight, network, adaptor)
         } catch (e) {
-            console.log("Error: " + (e instanceof Error).toString())
+            console.log("Error: " + (e as Error).toString())
             process.exit(1)
         }
     }
@@ -108,13 +108,13 @@ async function scan(fromHeight: bigint, toHeight: bigint, network: Network, adap
                 hash: {
                     $ne: blockInfo.hash
                 },
-                number: String(blockNumber),
+                number: Number(blockNumber),
                 network: network
             }, {status: BlockStatus.Forked})
 
             await Block.updateOne({
                 hash: blockInfo.hash,
-                number: String(blockNumber),
+                number: Number(blockNumber),
                 network: network
             }, {status: BlockStatus.Success})
 
@@ -128,7 +128,7 @@ async function scan(fromHeight: bigint, toHeight: bigint, network: Network, adap
         const newBlock: IBlock = new Block({
             _id: new mongoose.Types.ObjectId(),
             hash: blockInfo.hash,
-            number: blockNumber,
+            number: Number(blockNumber),
             status: lastFinalizedHeight >= blockNumber ? BlockStatus.Success : BlockStatus.Pending,
             network: network,
             isNotified: false,
@@ -143,6 +143,7 @@ async function scan(fromHeight: bigint, toHeight: bigint, network: Network, adap
                 txId: txAndEvents.transaction.id,
                 hash: txAndEvents.transaction.hash,
                 status: txAndEvents.transaction.status,
+                error: txAndEvents.transaction.error,
                 block: newBlock._id,
             })
             transactions.push(tx)

@@ -73,11 +73,16 @@ export class SubstrateAdaptor implements Adaptor {
                     this._isExFailed(event)
                 )
 
+            let error = ""
+            for (const event of failEvent) {
+                error += `${event.event.data[0].toString()}: ${event.event.data[1].toString()}\n`
+            }
             const txAndEvents: TxAndEvents = {
                 transaction: {
                     id: `${blockHash}-${index}`,
                     hash: exHash,
-                    status: failEvent.length == 0 ? TxStatus.Success : TxStatus.Fail
+                    status: failEvent.length == 0 ? TxStatus.Success : TxStatus.Fail,
+                    error: error
                 },
                 events: []
             }

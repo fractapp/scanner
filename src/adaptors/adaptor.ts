@@ -40,6 +40,7 @@ export type Transaction = {
     id: string,
     hash: string,
     status: TxStatus,
+    error: string
 }
 
 export type Event = {

@@ -39,7 +39,7 @@ const start = async () => {
             console.log("Sleep 3 seconds")
             await new Promise(resolve => setTimeout(resolve, 5000));
         } catch (e) {
-            console.log("Error: " + (e instanceof Error).toString())
+            console.log("Error: " + (e as Error).toString())
         }
     }
 }
@@ -58,7 +58,7 @@ async function scan(subscriberUrl: string, lastNotifiedHeight: bigint, network: 
     for (let blockNumber = lastNotifiedHeight+BigInt(1); blockNumber <= BigInt(lastBlock.number); blockNumber++) {
         const block: IBlock | null = await Block.findOne({
             status: BlockStatus.Success,
-            number: String(blockNumber)
+            number: Number(blockNumber)
         })
 
         if (block == null || block.isNotified) {
