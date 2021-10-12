@@ -12,6 +12,7 @@ dotenv.config()
 
 const args = process.argv.slice(2);
 
+const sslFile = process.env["SSL"] as string
 const start = async () => {
     const connectionString = process.env["MONGODB_CONNECTION"] as string
 
@@ -34,7 +35,8 @@ const start = async () => {
 
     await mongoose.connect(connectionString, {
         autoIndex: true,
-        autoCreate: true
+        autoCreate: true,
+        tlsCertificateFile: sslFile == "" ? undefined : sslFile
     })
     const envHeight: bigint = BigInt(defaultHeight)
 
