@@ -23,13 +23,11 @@ const defaultPageSize = 1000
 const connectionString = process.env["MONGODB_CONNECTION"] as string
 const host = process.env["HOST"] as string
 const port = Number(process.env["PORT"] as string)
-const sslFile = process.env["SSL"] as string
 
 const apiByNetwork = new  Map<Network, Adaptor>()
 mongoose.connect(connectionString, {
     autoIndex: true,
-    autoCreate: true,
-    tlsCertificateFile: sslFile == "" ? undefined : sslFile
+    autoCreate: true
 }, async function () {
     apiByNetwork.set(Network.Polkadot, await SubstrateAdaptor.getInstance(process.env["POLKADOT_RPC_URL"] as string, Currency.DOT))
     apiByNetwork.set(Network.Kusama, await SubstrateAdaptor.getInstance(process.env["KUSAMA_RPC_URL"] as string, Currency.KSM))

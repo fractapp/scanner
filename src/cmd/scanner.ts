@@ -11,10 +11,13 @@ import {SubstrateAdaptor} from "../adaptors/substrate";
 dotenv.config()
 
 const args = process.argv.slice(2);
-
-const sslFile = process.env["SSL"] as string
 const start = async () => {
     const connectionString = process.env["MONGODB_CONNECTION"] as string
+
+    await mongoose.connect(connectionString, {
+        autoIndex: true,
+        autoCreate: true,
+    })
 
     const network =  args[0] as Network
     const defaultHeight = args[1] != undefined && args[1].trim() != "" ? BigInt(args[1] as string) : BigInt(1)
@@ -33,11 +36,6 @@ const start = async () => {
             throw ("invalid network type")
     }
 
-    await mongoose.connect(connectionString, {
-        autoIndex: true,
-        autoCreate: true,
-        tlsCertificateFile: sslFile == "" ? undefined : sslFile
-    })
     const envHeight: bigint = BigInt(defaultHeight)
 
     const lastBlock: IBlock | null = await Block.findOne({status: BlockStatus.Success, network: network }).sort({ number: 'desc' })
