@@ -54,7 +54,7 @@ mongoose.connect(connectionString, {
     })
 })
 
-async function getMetadata(network: Network): BlockchainMetadata {
+async function getMetadata(network: Network): Promise<BlockchainMetadata> {
     const api = apiByNetwork.get(network)!
     const baseApi: ApiPromise = api.getBaseApi()
 
