@@ -1,4 +1,4 @@
-import express, {NextFunction, Request, Response} from 'express';
+import express from 'express';
 import {Event, IEvent} from "../models/db/event";
 import {Currency, toCurrency} from "../models/enums/currency";
 import {TransactionRs, TxStatusRs} from '../models/response/transactions'
@@ -24,13 +24,27 @@ const connectionString = process.env["MONGODB_CONNECTION"] as string
 const host = process.env["HOST"] as string
 const port = Number(process.env["PORT"] as string)
 
+type BlockchainMetadata = {
+    genesisHash: string,
+    metadata: string,
+    specVersion: number,
+    transactionVersion: number
+}
+
 const apiByNetwork = new  Map<Network, Adaptor>()
+
+const metadataByNetwork = new  Map<Network, BlockchainMetadata>()
+
 mongoose.connect(connectionString, {
     autoIndex: true,
     autoCreate: true
 }, async function () {
     apiByNetwork.set(Network.Polkadot, await SubstrateAdaptor.getInstance(process.env["POLKADOT_RPC_URL"] as string, Currency.DOT))
     apiByNetwork.set(Network.Kusama, await SubstrateAdaptor.getInstance(process.env["KUSAMA_RPC_URL"] as string, Currency.KSM))
+
+    metadataByNetwork.set(Network.Polkadot, await getMetadata(Network.Polkadot))
+    metadataByNetwork.set(Network.Kusama, await getMetadata(Network.Kusama))
+
     app.use(function(err: any, req: any, res: any, next: any) {
         console.error(err.stack);
         res.status(500).send();
@@ -39,6 +53,22 @@ mongoose.connect(connectionString, {
         console.log(`Example app listening at http://${host}:${port}`)
     })
 })
+
+async function getMetadata(network: Network): BlockchainMetadata {
+    const api = apiByNetwork.get(network)!
+    const baseApi: ApiPromise = api.getBaseApi()
+
+    const genesisHash = await baseApi.rpc.chain.getBlockHash(0)
+    const metadataRpc = baseApi.runtimeMetadata
+    const runtime  = baseApi.runtimeVersion
+
+    return {
+        genesisHash: genesisHash.toHex(),
+        metadata: metadataRpc.toHex(),
+        specVersion: runtime.specVersion.toBn().toNumber(),
+        transactionVersion: runtime.transactionVersion.toBn().toNumber(),
+    }
+}
 
 app.get('/transaction/:hash', asyncHandler(async (req, res) => {
     const hash = req.params.hash
@@ -149,19 +179,7 @@ app.get('/substrate/transfer/fee', asyncHandler(async (req, res) => {
 app.get('/substrate/base', asyncHandler(async (req, res) => {
     const network: Network = req.query.network == undefined ? Network.Polkadot : req.query.network as Network
 
-    const api = apiByNetwork.get(network)!
-    const baseApi: ApiPromise = api.getBaseApi()
-
-    const genesisHash = await baseApi.rpc.chain.getBlockHash(0)
-    const metadataRpc = baseApi.runtimeMetadata
-    const runtime  = baseApi.runtimeVersion
-
-    return res.send({
-        genesisHash: genesisHash.toHex(),
-        metadata: metadataRpc.toHex(),
-        specVersion: runtime.specVersion.toBn().toNumber(),
-        transactionVersion: runtime.transactionVersion.toBn().toNumber(),
-    });
+    return res.send(metadataByNetwork.get(network)!);
 }))
 
 app.get('/substrate/txBase/:sender', asyncHandler(async (req, res) => {
