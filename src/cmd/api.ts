@@ -13,7 +13,8 @@ import {Adaptor} from "../adaptors/adaptor";
 import {ApiPromise} from "@polkadot/api";
 import asyncHandler from 'express-async-handler';
 
-const app = express()
+export const app = express()
+export let server: any = null
 dotenv.config()
 app.use(morgan('combined'))
 
@@ -31,7 +32,7 @@ type BlockchainMetadata = {
     transactionVersion: number
 }
 
-const apiByNetwork = new  Map<Network, Adaptor>()
+const apiByNetwork = new Map<Network, Adaptor>()
 
 const metadataByNetwork = new  Map<Network, BlockchainMetadata>()
 
@@ -49,7 +50,7 @@ mongoose.connect(connectionString, {
         console.error(err.stack);
         res.status(500).send();
     });
-    app.listen(port, () => {
+    server = app.listen(port, () => {
         console.log(`Example app listening at http://${host}:${port}`)
     })
 })
@@ -157,7 +158,6 @@ app.get('/substrate/fee', asyncHandler(async (req, res) => {
         fee: info.partialFee.toBn().toString()
     });
 }))
-
 
 app.get('/substrate/transfer/fee', asyncHandler(async (req, res) => {
     const sender: string = req.query.sender as string
