@@ -12,6 +12,8 @@ import {scan} from "../scanner/scanner";
 dotenv.config()
 
 const args = process.argv.slice(2);
+const scanCount = BigInt(100)
+
 const start = async () => {
     const connectionString = process.env["MONGODB_CONNECTION"] as string
 
@@ -22,7 +24,6 @@ const start = async () => {
 
     const network =  args[0] as Network
     const defaultHeight = args[1] != undefined && args[1].trim() != "" ? BigInt(args[1] as string) : BigInt(1)
-    const scanCount =  args[2] != undefined && args[2].trim() != "" ? BigInt(args[2] as string) : BigInt(100)
 
     const currency = getNativeCurrency(network)
     let adaptor: Adaptor

@@ -1,0 +1,67 @@
+version: "3.9"  # optional since v1.27.0
+
+networks:
+  notifier_network:
+    external:
+      name: fractapp-server_subscriber_network
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./docker/api/Dockerfile
+    ports:
+      - "3000:3000"
+    networks:
+      - notifier_network
+
+  notifier-polkadot:
+    environment:
+      network: "Polkadot"
+      defaultHeight: "7647081"
+    build:
+      context: .
+      dockerfile: ./docker/notifier/Dockerfile
+    networks:
+      - notifier_network
+
+  notifier-kusama:
+    environment:
+      network: "Kusama"
+      defaultHeight: "10038895"
+    build:
+      context: .
+      dockerfile: ./docker/notifier/Dockerfile
+    networks:
+      - notifier_network
+
+  scanner-polkadot:
+    environment:
+      network: "Polkadot"
+      defaultHeight: "7647081"
+    build:
+      context: .
+      dockerfile: ./docker/scanner/Dockerfile
+    networks:
+      - notifier_network
+
+  scanner-kusama:
+    environment:
+      network: "Kusama"
+      defaultHeight: "10038895"
+    build:
+      context: .
+      dockerfile: ./docker/scanner/Dockerfile
+    networks:
+      - notifier_network
+
+  mongo:
+    image: mongo
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    networks:
+      - notifier_network
+

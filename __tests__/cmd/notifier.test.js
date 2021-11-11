@@ -1,10 +1,12 @@
 import { notify } from '../../src/notifier/notifier';
 import { Currency } from '../../src/models/enums/currency';
-import { BlockStatus, Network, TxStatus } from '../../src/models/enums/status';
+import {BlockStatus, Network, TxAction, TxStatus} from '../../src/models/enums/status';
 import axios from 'axios';
 import mockAxios from 'jest-mock-axios';
 import {Block} from "../../src/models/db/block";
 import {Event} from "../../src/models/db/event";
+import {ITransaction} from "../../src/models/db/transactions";
+import {TxStatusRs} from "../../src/models/response/transactions";
 
 jest.mock('axios');
 
@@ -105,16 +107,25 @@ it('test notify', async () => {
     await axios.post.mockResolvedValueOnce({status: 200});
 
     expect(await notify('url', 125n, Network.Polkadot)).toStrictEqual(126n);
-    expect(axios.post).toBeCalledWith(`url/notify`, {
-        from: event.from,
+
+    const notifyTx = {
+        id: event.eventId,
+        action: event.action === undefined ? TxAction.Transfer : event.action,
+        hash: txs[0].hash,
+        currency: event.currency,
         to: event.to,
+        from: event.from,
         value: event.value,
-        currency: event.currency
-    })
+        fee: event.fee,
+        timestamp: event.timestamp,
+        status: txs[0].status === TxStatus.Success ? TxStatusRs.Success : TxStatusRs.Fail
+    }
+
+    expect(axios.post).toBeCalledWith(`url/notify`, [
+        notifyTx
+    ])
     expect(spyBlock).toBeCalledTimes(3);
     expect(spyEvent).toBeCalledTimes(2);
     expect(block.isNotified).toEqual(true)
-    expect(event.isNotified).toEqual(true)
     expect(saveBlock).toBeCalledTimes(1)
-    expect(saveEvent).toBeCalledTimes(1)
 });

@@ -71,6 +71,7 @@ async function getMetadata(network: Network): Promise<BlockchainMetadata> {
     }
 }
 
+//TODO: warn one hash for multi chain
 app.get('/transaction/:hash', asyncHandler(async (req, res) => {
     const hash = req.params.hash
     let txs: Array<ITransaction> = await Transaction.find({

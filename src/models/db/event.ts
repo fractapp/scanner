@@ -14,8 +14,7 @@ export interface IEvent extends Document {
     fee: string,
     value: string,
     timestamp: number,
-    currency: Currency,
-    isNotified: boolean
+    currency: Currency
 }
 
 const schema = new Schema({
@@ -28,7 +27,6 @@ const schema = new Schema({
     fee: String,
     value: String,
     timestamp: Number,
-    currency: Number,
-    isNotified: Boolean
+    currency: Number
 });
 export const Event = model<IEvent>("event", schema)
