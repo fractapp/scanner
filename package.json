@@ -15,7 +15,7 @@
     "devScanner": "ts-node src/cmd/scanner.ts",
     "devNotifier": "ts-node src/cmd/notifier.ts",
     "devBot": "ts-node src/cmd/bot.ts",
-    "test": "jest"
+    "test": "jest --coverage"
   },
   "dependencies": {
     "@polkadot/api": "^6.3.1",
