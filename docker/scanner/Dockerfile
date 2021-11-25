@@ -7,6 +7,6 @@ WORKDIR /app
 
 COPY . /app
 
-RUN yarn build && mv .env-docker .env
+RUN yarn install && yarn build && mv .env-docker .env
 
 CMD ["sh", "-c", "node ./bin/src/cmd/scanner.js ${network} ${defaultHeight}"]
